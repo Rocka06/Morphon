@@ -2,10 +2,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-public partial class JSONConfigFile : Json
+namespace Morphon;
+public partial class MorphonConfigFile : Json
 {
     private Godot.Collections.Dictionary<string, Godot.Collections.Dictionary<string, Variant>> m_Data = new();
 
+    /// <summary>
+    /// Set a Variant value (It can only be a type that is supported by Json)
+    /// Resources that are not local to scene will be saved by their path
+    /// </summary>
     public void SetValue(string section, string key, Variant value)
     {
         if (!HasSection(section))
@@ -23,7 +28,7 @@ public partial class JSONConfigFile : Json
 
         m_Data[section][key] = value;
     }
-    public void SetValue(string section, string key, IResourceSerializable value)
+    public void SetValue(string section, string key, IMorphonSerializable value)
     {
         if (!HasSection(section))
             m_Data.Add(section, new());
@@ -32,14 +37,14 @@ public partial class JSONConfigFile : Json
 
         m_Data[section][key] = value.Serialize();
     }
-    public void SetValue(string section, string key, IEnumerable<IResourceSerializable> list)
+    public void SetValue(string section, string key, IEnumerable<IMorphonSerializable> list)
     {
         if (!HasSection(section))
             m_Data.Add(section, new());
         if (!m_Data[section].ContainsKey(key))
             m_Data[section].Add(key, new());
 
-        m_Data[section][key] = JsonAutoSerializer.SerializeList(list.ToList());
+        m_Data[section][key] = MorphonAutoSerializer.SerializeList(list.ToList());
     }
 
     public T GetValue<[MustBeVariant] T>(string section, string key, T @default = default)
@@ -47,9 +52,9 @@ public partial class JSONConfigFile : Json
         if (!HasSectionKey(section, key)) return @default;
         Variant value = m_Data[section][key];
 
-        if (typeof(IResourceSerializable).IsAssignableFrom(typeof(T)))
+        if (typeof(IMorphonSerializable).IsAssignableFrom(typeof(T)))
         {
-            return (T)JsonAutoSerializer.Deserialize(value.As<string>());
+            return (T)MorphonAutoSerializer.Deserialize(value.As<string>());
         }
         else if (typeof(Resource).IsAssignableFrom(typeof(T)))
         {
@@ -58,12 +63,12 @@ public partial class JSONConfigFile : Json
 
         return value.As<T>();
     }
-    public List<T> GetListValue<T>(string section, string key, List<T> @default = default) where T : IResourceSerializable
+    public List<T> GetListValue<T>(string section, string key, List<T> @default = default) where T : IMorphonSerializable
     {
         if (!HasSectionKey(section, key)) return @default;
         string jsonData = m_Data[section][key].As<string>();
 
-        return JsonAutoSerializer.DeserializeList(jsonData).Cast<T>().ToList();
+        return MorphonAutoSerializer.DeserializeList(jsonData).Cast<T>().ToList();
     }
 
     public bool HasSection(string section)
