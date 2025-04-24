@@ -1,0 +1,145 @@
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+
+public partial class JSONConfigFile : Json
+{
+    private Godot.Collections.Dictionary<string, Godot.Collections.Dictionary<string, Variant>> m_Data = new();
+
+    public void SetValue(string section, string key, Variant value)
+    {
+        if (!HasSection(section))
+            m_Data.Add(section, new());
+        if (!m_Data[section].ContainsKey(key))
+            m_Data[section].Add(key, new());
+
+        Resource rValue = value.As<Resource>();
+
+        if (rValue != null)
+        {
+            m_Data[section][key] = GetResourcePath(rValue);
+            return;
+        }
+
+        m_Data[section][key] = value;
+    }
+    public void SetValue(string section, string key, IResourceSerializable value)
+    {
+        if (!HasSection(section))
+            m_Data.Add(section, new());
+        if (!m_Data[section].ContainsKey(key))
+            m_Data[section].Add(key, new());
+
+        m_Data[section][key] = value.Serialize();
+    }
+    public void SetValue(string section, string key, IEnumerable<IResourceSerializable> list)
+    {
+        if (!HasSection(section))
+            m_Data.Add(section, new());
+        if (!m_Data[section].ContainsKey(key))
+            m_Data[section].Add(key, new());
+
+        m_Data[section][key] = JsonAutoSerializer.SerializeList(list.ToList());
+    }
+
+    public T GetValue<[MustBeVariant] T>(string section, string key, T @default = default)
+    {
+        if (!HasSectionKey(section, key)) return @default;
+        Variant value = m_Data[section][key];
+
+        if (typeof(IResourceSerializable).IsAssignableFrom(typeof(T)))
+        {
+            return (T)JsonAutoSerializer.Deserialize(value.As<string>());
+        }
+        else if (typeof(Resource).IsAssignableFrom(typeof(T)))
+        {
+            return SafeLoadResourceFromPath<T>(value.As<string>());
+        }
+
+        return value.As<T>();
+    }
+    public List<T> GetListValue<T>(string section, string key, List<T> @default = default) where T : IResourceSerializable
+    {
+        if (!HasSectionKey(section, key)) return @default;
+        string jsonData = m_Data[section][key].As<string>();
+
+        return JsonAutoSerializer.DeserializeList(jsonData).Cast<T>().ToList();
+    }
+
+    public bool HasSection(string section)
+    {
+        return m_Data.ContainsKey(section);
+    }
+    public bool HasSectionKey(string section, string key)
+    {
+        if (HasSection(section)) return m_Data[section].ContainsKey(key);
+        return false;
+    }
+
+    public string[] GetSections()
+    {
+        return m_Data.Keys.ToArray();
+    }
+    public string[] GetSectionKeys(string section)
+    {
+        if (!HasSection(section)) return System.Array.Empty<string>();
+        return m_Data[section].Keys.ToArray();
+    }
+
+    public bool Save(string path)
+    {
+        using FileAccess file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+        if (file == null) return false;
+
+        file.StoreString(Stringify(m_Data, "", true, true));
+        return true;
+    }
+    public bool Load(string path)
+    {
+        using FileAccess file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        if (file == null) return false;
+
+        string content = file.GetAsText();
+        if (content.Trim() == "") return false;
+
+        m_Data = ParseString(content).As<Godot.Collections.Dictionary<string, Godot.Collections.Dictionary<string, Variant>>>();
+
+        return m_Data != null;
+    }
+
+    public void Clear()
+    {
+        m_Data.Clear();
+    }
+    public void ClearSection(string section)
+    {
+        if (HasSection(section))
+        {
+            m_Data.Remove(section);
+        }
+    }
+    public void ClearKey(string section, string key)
+    {
+        if (HasSectionKey(section, key))
+        {
+            m_Data[section].Remove(key);
+        }
+    }
+
+    public static string GetResourcePath(Resource resource)
+    {
+        if (resource == null) return null;
+        if (!resource.ResourceLocalToScene)
+        {
+            return resource.ResourcePath;
+        }
+        return null;
+    }
+    public static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
+    {
+        if (!path.StartsWith("res://")) return @default;
+
+        Variant obj = GD.Load(path);
+        return obj.As<T>();
+    }
+}
