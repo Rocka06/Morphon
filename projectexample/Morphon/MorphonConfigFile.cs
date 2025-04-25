@@ -158,7 +158,7 @@ public partial class MorphonConfigFile : Json
         }
     }
 
-    private static string GetResourcePath(Resource resource)
+    public static string GetResourcePath(Resource resource)
     {
         if (resource == null) return null;
         if (!resource.ResourceLocalToScene)
@@ -167,7 +167,7 @@ public partial class MorphonConfigFile : Json
         }
         return null;
     }
-    private static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
+    public static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
     {
         if (!path.StartsWith("res://")) return @default;
 
