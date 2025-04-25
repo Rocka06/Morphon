@@ -63,7 +63,7 @@ public static class MorphonAutoSerializer
     public static IMorphonSerializable[] DeserializeList(Variant data)
     {
         System.Collections.Generic.List<IMorphonSerializable> objList = new();
-        Array<Dictionary<string, Variant>> arrayData = data.As<Array<Dictionary<string, Variant>>>();
+        var arrayData = data.As<Array<Dictionary<string, Variant>>>();
         if (arrayData == null)
         {
             GD.PrintErr("Invalid list data!");

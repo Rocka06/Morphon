@@ -13,12 +13,15 @@ public partial class MorphonConfigFile : Json
     public void SetValue(string section, string key, Variant value)
     {
         NewKey(section, key);
-        Resource rValue = value.As<Resource>();
 
-        if (rValue != null)
+        if (value.VariantType != Variant.Type.Nil)
         {
-            m_Data[section][key] = GetResourcePath(rValue);
-            return;
+            Resource rValue = value.As<Resource>();
+            if (rValue != null)
+            {
+                m_Data[section][key] = GetResourcePath(rValue);
+                return;
+            }
         }
 
         m_Data[section][key] = value;
@@ -30,6 +33,7 @@ public partial class MorphonConfigFile : Json
     public void SetValue(string section, string key, IMorphonSerializable value)
     {
         NewKey(section, key);
+        
         value.Serialize(out var data);
         data.Add("Type", value.GetType().FullName);
 
@@ -37,7 +41,7 @@ public partial class MorphonConfigFile : Json
         foreach (var pair in data)
         {
             if (pair.Value.VariantType == Variant.Type.Nil) continue;
-            
+
             Resource rValue = pair.Value.As<Resource>();
             if (rValue != null)
             {
@@ -63,7 +67,7 @@ public partial class MorphonConfigFile : Json
 
         if (typeof(IMorphonSerializable).IsAssignableFrom(typeof(T)))
         {
-            Dictionary<string, Variant> data = value.As<Dictionary<string, Variant>>();
+            var data = value.As<Dictionary<string, Variant>>();
             if (data == null) return default;
 
             //Check for paths and load them back
@@ -89,7 +93,7 @@ public partial class MorphonConfigFile : Json
         if (!HasSectionKey(section, key)) return @default;
         Array<Dictionary<string, Variant>> data = m_Data[section][key].As<Array<Dictionary<string, Variant>>>();
 
-        return MorphonAutoSerializer.DeserializeList(data).Cast<T>().ToList();
+        return MorphonAutoSerializer.DeserializeList(data).Cast<T>();
     }
 
     public bool HasSection(string section)
@@ -117,7 +121,7 @@ public partial class MorphonConfigFile : Json
         using FileAccess file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (file == null) return false;
 
-        file.StoreString(Stringify(m_Data, "", true, true));
+        if(!file.StoreString(Stringify(m_Data, "", true, true))) return false;
         return true;
     }
     public bool Load(string path)
@@ -128,9 +132,11 @@ public partial class MorphonConfigFile : Json
         string content = file.GetAsText();
         if (content.Trim() == "") return false;
 
-        m_Data = ParseString(content).As<Godot.Collections.Dictionary<string, Godot.Collections.Dictionary<string, Variant>>>();
+        var data = ParseString(content).As<Dictionary<string, Dictionary<string, Variant>>>();
 
-        return m_Data != null;
+        if(data == null) return false;
+        m_Data = data;
+        return true;
     }
 
     public void Clear()
