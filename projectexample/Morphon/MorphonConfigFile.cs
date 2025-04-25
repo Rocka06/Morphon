@@ -13,11 +13,7 @@ public partial class MorphonConfigFile : Json
     /// </summary>
     public void SetValue(string section, string key, Variant value)
     {
-        if (!HasSection(section))
-            m_Data.Add(section, new());
-        if (!m_Data[section].ContainsKey(key))
-            m_Data[section].Add(key, new());
-
+        NewKey(section, key);
         Resource rValue = value.As<Resource>();
 
         if (rValue != null)
@@ -30,20 +26,12 @@ public partial class MorphonConfigFile : Json
     }
     public void SetValue(string section, string key, IMorphonSerializable value)
     {
-        if (!HasSection(section))
-            m_Data.Add(section, new());
-        if (!m_Data[section].ContainsKey(key))
-            m_Data[section].Add(key, new());
-
+        NewKey(section, key);
         m_Data[section][key] = value.Serialize();
     }
     public void SetValue(string section, string key, IEnumerable<IMorphonSerializable> list)
     {
-        if (!HasSection(section))
-            m_Data.Add(section, new());
-        if (!m_Data[section].ContainsKey(key))
-            m_Data[section].Add(key, new());
-
+        NewKey(section, key);
         m_Data[section][key] = MorphonAutoSerializer.SerializeList(list.ToList());
     }
 
@@ -146,5 +134,13 @@ public partial class MorphonConfigFile : Json
 
         Variant obj = GD.Load(path);
         return obj.As<T>();
+    }
+
+    private void NewKey(string section, string key)
+    {
+        if (!HasSection(section))
+            m_Data.Add(section, new());
+        if (!m_Data[section].ContainsKey(key))
+            m_Data[section].Add(key, new());
     }
 }

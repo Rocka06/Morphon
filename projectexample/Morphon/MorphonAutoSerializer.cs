@@ -25,7 +25,7 @@ public static class MorphonAutoSerializer
 
     public static IMorphonSerializable Deserialize(string json)
     {
-        Godot.Collections.Dictionary dict = Json.ParseString(json).As<Godot.Collections.Dictionary>();
+        Godot.Collections.Dictionary<string, Variant> dict = Json.ParseString(json).As<Godot.Collections.Dictionary<string, Variant>>();
         
         if (dict == null) return null;
         if (!dict.ContainsKey("Type"))
@@ -42,7 +42,7 @@ public static class MorphonAutoSerializer
         }
 
         IMorphonSerializable obj = (IMorphonSerializable)Activator.CreateInstance(_typeMap[type]);
-        obj.Deserialize(json);
+        obj.Deserialize(dict);
         return obj;
     }
 
@@ -60,15 +60,15 @@ public static class MorphonAutoSerializer
         return objList;
     }
 
-    public static string SerializeList(IEnumerable<IMorphonSerializable> list)
+    public static Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> SerializeList(IEnumerable<IMorphonSerializable> list)
     {
-        Godot.Collections.Array<string> array = new();
+        Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> objArray = new();
 
         foreach (IMorphonSerializable obj in list)
         {
-            array.Add(obj.Serialize());
+            objArray.Add(obj.Serialize());
         }
 
-        return array.ToString();
+        return objArray;
     }
 }
