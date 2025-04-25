@@ -23,18 +23,17 @@ Just copy the Morphon folder into your project and you are good to go!
 ### Create custom Resources that implement the `IMorphonSerializable` interface
 
 #### Serialization is basically just adding Json supported types to a Dictionary
-If a value is not supported by Json (Resources):
-- If it implements the IMorphonSerializable interface then you can use MorphonAutoSerializer.Serialize(object) to deserialize the object.
+If a value you are trying to serialize is not supported by Json (for example: Resources):
+- If it implements the IMorphonSerializable interface then you can use `MorphonAutoSerializer.Serialize(object)` to serialize the object.
 - If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.SerializeList(list)` to serialize the list.
-- If it's a built in Resource and is not local to scene (for example: SpriteFrames) then you can just add it to the dictionary and it have it's path saved!
+- If it's a built in Resource and is not local to scene (for example: SpriteFrames) then you can just add it to the dictionary and it's path will be saved, and later loaded back!
 - Otherwise it cannot be saved properly, and a value of `null` will be written in the save file
 
 #### Deserialization is basically just reading data from a Dictionary of Variants
-If a value you are trying to deserialize is not supported by Json (Resources):
-- If it implements the IMorphonSerializable interface then you can use MorphonAutoSerializer.Deserialize(object) to deserialize the object.
+If a value you are trying to deserialize is not supported by Json (for example: Resources):
+- If it implements the IMorphonSerializable interface then you can use `MorphonAutoSerializer.Deserialize(object)` to deserialize the object.
 - If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.DeserializeList(list)` to deserialize the list.
 - If it's a built in Resource and was not local to scene (for example: SpriteFrames) then you can just parse the Variant with `.As<SpriteFrames>()`!
-- Otherwise it cannot be saved properly, and a value of `null` will be written in the save file
 
 Pro tip: If you make the `IMorphonSerializable`s functions virtual then you don't have to reserialize the base class!
 
