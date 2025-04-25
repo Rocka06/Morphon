@@ -19,7 +19,7 @@ public partial class MorphonConfigFile : Json
             Resource rValue = value.As<Resource>();
             if (rValue != null)
             {
-                m_Data[section][key] = GetResourcePath(rValue);
+                m_Data[section][key] = MorphonAutoSerializer.GetResourcePath(rValue);
                 return;
             }
         }
@@ -33,23 +33,7 @@ public partial class MorphonConfigFile : Json
     public void SetValue(string section, string key, IMorphonSerializable value)
     {
         NewKey(section, key);
-        
-        value.Serialize(out var data);
-        data.Add("Type", value.GetType().FullName);
-
-        //Check for resource and save their path
-        foreach (var pair in data)
-        {
-            if (pair.Value.VariantType == Variant.Type.Nil) continue;
-
-            Resource rValue = pair.Value.As<Resource>();
-            if (rValue != null)
-            {
-                data[pair.Key] = GetResourcePath(rValue);
-            }
-        }
-
-        m_Data[section][key] = data;
+        m_Data[section][key] = MorphonAutoSerializer.Serialize(value);
     }
     public void SetValue(string section, string key, System.Collections.Generic.IEnumerable<IMorphonSerializable> list)
     {
@@ -67,33 +51,19 @@ public partial class MorphonConfigFile : Json
 
         if (typeof(IMorphonSerializable).IsAssignableFrom(typeof(T)))
         {
-            var data = value.As<Dictionary<string, Variant>>();
-            if (data == null) return default;
-
-            //Check for paths and load them back
-            foreach (var pair in data)
-            {
-                if (pair.Value.As<string>().StartsWith("res://"))
-                {
-                    data[pair.Key] = SafeLoadResourceFromPath<Variant>(pair.Value.As<string>());
-                }
-            }
-
-            return (T)MorphonAutoSerializer.Deserialize(value.As<Dictionary<string, Variant>>());
+            return (T)MorphonAutoSerializer.Deserialize(value);
         }
         else if (typeof(Resource).IsAssignableFrom(typeof(T)))
         {
             if (value.As<string> == null) return default;
-            return SafeLoadResourceFromPath<T>(value.As<string>());
+            return MorphonAutoSerializer.SafeLoadResourceFromPath<T>(value.As<string>());
         }
         return value.As<T>();
     }
     public System.Collections.Generic.IEnumerable<T> GetListValue<T>(string section, string key, System.Collections.Generic.IEnumerable<T> @default = default) where T : IMorphonSerializable
     {
         if (!HasSectionKey(section, key)) return @default;
-        Array<Dictionary<string, Variant>> data = m_Data[section][key].As<Array<Dictionary<string, Variant>>>();
-
-        return MorphonAutoSerializer.DeserializeList(data).Cast<T>();
+        return MorphonAutoSerializer.DeserializeList(m_Data[section][key]).Cast<T>();
     }
 
     public bool HasSection(string section)
@@ -121,7 +91,7 @@ public partial class MorphonConfigFile : Json
         using FileAccess file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (file == null) return false;
 
-        if(!file.StoreString(Stringify(m_Data, "", true, true))) return false;
+        if (!file.StoreString(Stringify(m_Data, "", true, true))) return false;
         return true;
     }
     public bool Load(string path)
@@ -134,7 +104,7 @@ public partial class MorphonConfigFile : Json
 
         var data = ParseString(content).As<Dictionary<string, Dictionary<string, Variant>>>();
 
-        if(data == null) return false;
+        if (data == null) return false;
         m_Data = data;
         return true;
     }
@@ -156,23 +126,6 @@ public partial class MorphonConfigFile : Json
         {
             m_Data[section].Remove(key);
         }
-    }
-
-    public static string GetResourcePath(Resource resource)
-    {
-        if (resource == null) return null;
-        if (!resource.ResourceLocalToScene)
-        {
-            return resource.ResourcePath;
-        }
-        return null;
-    }
-    public static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
-    {
-        if (!path.StartsWith("res://")) return @default;
-
-        Variant obj = GD.Load(path);
-        return obj.As<T>();
     }
 
     private void NewKey(string section, string key)

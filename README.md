@@ -18,14 +18,14 @@ A Plug-and-Play **ConfigFile-style** system for Godot 4 C# that supports saving 
 
 #### Serialization is basically just adding Json supported types to a Dictionary
 If a value is not supported by Json (Resources):
-- If it implements the IMorphonSerializable interface then you can use its Serialize() function.
+- If it implements the IMorphonSerializable interface then you can use MorphonAutoSerializer.Serialize(object) to deserialize the object.
 - If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.SerializeList(list)` to serialize the list.
 - If it's a built in Resource and is not local to scene (for example: SpriteFrames) then you can just add it to the dictionary and it have it's path saved!
 - Otherwise it cannot be saved properly, and a value of `null` will be written in the save file
 
 #### Deserialization is basically just reading data from a Dictionary of Variants
 If a value you are trying to deserialize is not supported by Json (Resources):
-- If it implements the IMorphonSerializable interface then you can use its Serialize() function.
+- If it implements the IMorphonSerializable interface then you can use MorphonAutoSerializer.Deserialize(object) to deserialize the object.
 - If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.DeserializeList(list)` to deserialize the list.
 - If it's a built in Resource and was not local to scene (for example: SpriteFrames) then you can just parse the Variant with `.As<SpriteFrames>()`!
 - Otherwise it cannot be saved properly, and a value of `null` will be written in the save file
@@ -102,31 +102,52 @@ using Godot.Collections;
 public partial class Dog : AnimalResource
 {
     [Export] public Cat[] CatFriends;
+    [Export] public Dog DogFriend;
     [Export] public Texture2D Icon;
 
     public override void Serialize(out Dictionary<string, Variant> data)
     {
         base.Serialize(out data);
 
-        //This is how you can Serialize lists of IMorphonSerializable objects
-        data.Add("CatFriends", MorphonAutoSerializer.SerializeList(CatFriends));
-        data.Add("Icon", Icon);
+        if (DogFriend != null)
+        {
+            data.Add("DogFriend", MorphonAutoSerializer.Serialize(DogFriend));
+        }
+        if (CatFriends != null)
+        {
+            data.Add("CatFriends", MorphonAutoSerializer.SerializeList(CatFriends));
+        }
+        if (Icon != null)
+        {
+            data.Add("Icon", Icon);
+        }
     }
     public override void Deserialize(Dictionary<string, Variant> data)
     {
         base.Deserialize(data);
 
-        //This is how you can Deserialize lists of IMorphonSerializable objects
-        IMorphonSerializable[] serializables = MorphonAutoSerializer.DeserializeList(data["CatFriends"]);
-        CatFriends = serializables.Cast<Cat>().ToArray();
+        //These checks allow the variables to be null
+        if (data.ContainsKey("DogFriend"))
+        {
+            DogFriend = (Dog)MorphonAutoSerializer.Deserialize(data["DogFriend"]);
+        }
 
-        Icon = data["Icon"].As<Texture2D>();
+        if (data.ContainsKey("CatFriends"))
+        {
+            IMorphonSerializable[] serializables = MorphonAutoSerializer.DeserializeList(data["CatFriends"]);
+            CatFriends = serializables.Cast<Cat>().ToArray();
+        }
+
+        if (data.ContainsKey("Icon"))
+        {
+            Icon = data["Icon"].As<Texture2D>();
+        }
     }
 
     public override string ToString()
     {
         string baseString = base.ToString();
-        return baseString + $"\nCatFriend: {CatFriends[0].Name}\n{Icon.ResourcePath}";
+        return baseString + $"\nCatFriend: {CatFriends[0].Name}\nIcon path: {Icon?.ResourcePath}\nDogFriend: {DogFriend.Name}";
     }
 }
 ```
@@ -167,7 +188,8 @@ Loaded data:
 Name: Doggo
 Age: 1
 CatFriend: Kitty
-res://icon.svg
+Icon path: res://icon.svg
+DogFriend: Pongo
 ```
 
 ### 💾 File Format Example
@@ -185,6 +207,12 @@ res://icon.svg
           "color": "ffff00ff"
         }
       ],
+      "DogFriend": {
+        "Age": 8,
+        "CatFriends": [],
+        "Name": "Pongo",
+        "Type": "Dog"
+      },
       "Icon": "res://icon.svg",
       "Name": "Doggo",
       "Type": "Dog"

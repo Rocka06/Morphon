@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://2pxalodvigs"]
+[gd_scene load_steps=8 format=3 uid="uid://2pxalodvigs"]
 
 [ext_resource type="Script" uid="uid://c70u57un8374n" path="res://Test.cs" id="1_myinc"]
 [ext_resource type="Script" uid="uid://bxexoyohmapsi" path="res://Cat.cs" id="2_njov2"]
@@ -12,9 +12,17 @@ Name = "Kitty"
 Age = 3
 metadata/_custom_type_script = "uid://bxexoyohmapsi"
 
+[sub_resource type="Resource" id="Resource_q1uvj"]
+script = ExtResource("3_2au82")
+CatFriends = null
+Name = "Pongo"
+Age = 8
+metadata/_custom_type_script = "uid://dfo6wtw0dde7v"
+
 [sub_resource type="Resource" id="Resource_aq4fw"]
 script = ExtResource("3_2au82")
 CatFriends = Array[Object]([SubResource("Resource_8tn2x")])
+DogFriend = SubResource("Resource_q1uvj")
 Icon = ExtResource("3_8tn2x")
 Name = "Doggo"
 Age = 1

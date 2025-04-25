@@ -31,6 +31,10 @@ public static class MorphonAutoSerializer
     public static IMorphonSerializable Deserialize(Variant data)
     {
         Dictionary<string, Variant> dictData = data.As<Dictionary<string, Variant>>();
+
+        //This is needed so that we don't override the original
+        Dictionary<string, Variant> newDict = new();
+
         if (dictData == null)
         {
             GD.PrintErr("Invalid data!");
@@ -39,7 +43,7 @@ public static class MorphonAutoSerializer
 
         if (!dictData.ContainsKey("Type"))
         {
-            GD.PrintErr("Type was not set in serialized data!");
+            GD.PrintErr($"Type was not set in serialized data!\nData: {dictData}");
             return null;
         }
 
@@ -50,9 +54,45 @@ public static class MorphonAutoSerializer
             return null;
         }
 
+        //Check for paths and load them back
+        foreach (var pair in dictData)
+        {
+            if (pair.Value.As<string>().StartsWith("res://"))
+            {
+                newDict.Add(pair.Key, SafeLoadResourceFromPath<Variant>(pair.Value.As<string>()));
+            }
+            else
+            {
+                newDict.Add(pair.Key, pair.Value);
+            }
+        }
+
         IMorphonSerializable obj = (IMorphonSerializable)Activator.CreateInstance(_typeMap[type]);
-        obj.Deserialize(dictData);
+        obj.Deserialize(newDict);
         return obj;
+    }
+
+    /// <summary>
+    /// Serializes the object with .Serialize() and adds the type of the object to the dictionary
+    /// </summary>
+    public static Dictionary<string, Variant> Serialize(IMorphonSerializable obj)
+    {
+        obj.Serialize(out var data);
+        data.Add("Type", obj.GetType().FullName);
+
+        //Check for resources and save their path
+        foreach (var pair in data)
+        {
+            if (pair.Value.VariantType == Variant.Type.Nil) continue;
+
+            Resource rValue = pair.Value.As<Resource>();
+            if (rValue != null)
+            {
+                data[pair.Key] = GetResourcePath(rValue);
+            }
+        }
+
+        return data;
     }
 
     /// <summary>
@@ -90,11 +130,27 @@ public static class MorphonAutoSerializer
 
         foreach (IMorphonSerializable obj in list)
         {
-            obj.Serialize(out Dictionary<string, Variant> data);
-            data.Add("Type", obj.GetType().FullName);
-            objArray.Add(data);
+            objArray.Add(Serialize(obj));
         }
 
         return objArray;
+    }
+
+
+    public static string GetResourcePath(Resource resource)
+    {
+        if (resource == null) return null;
+        if (!resource.ResourceLocalToScene)
+        {
+            return resource.ResourcePath;
+        }
+        return null;
+    }
+    public static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
+    {
+        if (!path.StartsWith("res://")) return @default;
+
+        Variant obj = GD.Load(path);
+        return obj.As<T>();
     }
 }
