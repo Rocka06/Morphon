@@ -30,28 +30,24 @@ public static class MorphonAutoSerializer
     /// <returns>IMorphonSerializable object</returns>
     public static IMorphonSerializable Deserialize(Variant data)
     {
-        Dictionary<string, Variant> dictData = data.As<Dictionary<string, Variant>>();
-
         //This is needed so that we don't override the original
         Dictionary<string, Variant> newDict = new();
+        Dictionary<string, Variant> dictData = data.As<Dictionary<string, Variant>>();
 
-        if (dictData == null)
+        if (data.VariantType != Variant.Type.Dictionary)
         {
-            GD.PrintErr("Invalid data!");
-            return null;
+            throw new ArgumentException("Invalid data!");
         }
 
         if (!dictData.ContainsKey("Type"))
         {
-            GD.PrintErr($"Type was not set in serialized data!\nData: {dictData}");
-            return null;
+            throw new ArgumentException($"Type was not set in serialized data!\nData: {dictData}");
         }
 
         string type = dictData["Type"].As<string>();
         if (!_typeMap.ContainsKey(type))
         {
-            GD.PrintErr("Unregistered type: ", type);
-            return null;
+            throw new ArgumentException("Unregistered type: ", type);
         }
 
         //Check for paths and load them back
@@ -77,12 +73,6 @@ public static class MorphonAutoSerializer
     /// </summary>
     public static Dictionary<string, Variant> Serialize(IMorphonSerializable obj)
     {
-        if (obj == null)
-        {
-            GD.PrintErr("You cannot pass null to MorphonAutoSerializer.Serialize()!");
-            return null;
-        }
-
         obj.Serialize(out var data);
         data.Add("Type", obj.GetType().FullName);
 
@@ -112,8 +102,7 @@ public static class MorphonAutoSerializer
         var arrayData = data.As<Array<Dictionary<string, Variant>>>();
         if (arrayData == null)
         {
-            GD.PrintErr("Invalid list data!");
-            return null;
+            throw new ArgumentException("Invalid list data!");
         }
 
         foreach (Dictionary<string, Variant> item in arrayData)

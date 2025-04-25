@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Godot;
 using Godot.Collections;
@@ -49,6 +50,11 @@ public partial class MorphonConfigFile : Json
         if (!HasSectionKey(section, key)) return @default;
         Variant value = m_Data[section][key];
 
+        if (value.VariantType == Variant.Type.Array)
+        {
+            throw new ArgumentException("The data you are trying to deserialize is a list, not a single object! Use GetListValue instead!");
+        }
+        
         if (typeof(IMorphonSerializable).IsAssignableFrom(typeof(T)))
         {
             return (T)MorphonAutoSerializer.Deserialize(value);
