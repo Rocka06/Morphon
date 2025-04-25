@@ -1,15 +1,14 @@
-using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Godot.Collections;
 
 namespace Morphon;
 public partial class MorphonConfigFile : Json
 {
-    private Godot.Collections.Dictionary<string, Godot.Collections.Dictionary<string, Variant>> m_Data = new();
+    private Dictionary<string, Dictionary<string, Variant>> m_Data = new();
 
     /// <summary>
-    /// Set a Variant value (It can only be a type that is supported by Json)
-    /// Resources that are not local to scene will be saved by their path
+    /// Sets a Variant value. If the variant is a Resource that is not local to scene, then it's path will be saved
     /// </summary>
     public void SetValue(string section, string key, Variant value)
     {
@@ -24,19 +23,39 @@ public partial class MorphonConfigFile : Json
 
         m_Data[section][key] = value;
     }
+
+    /// <summary>
+    /// Sets an IMorphonSerializable value. If the you Serialize a Resource that is not local to scene, then it's path will be saved
+    /// </summary>
     public void SetValue(string section, string key, IMorphonSerializable value)
     {
         NewKey(section, key);
         value.Serialize(out var data);
         data.Add("Type", value.GetType().FullName);
+
+        //Check for resource and save their path
+        foreach (var pair in data)
+        {
+            if (pair.Value.VariantType == Variant.Type.Nil) continue;
+            
+            Resource rValue = pair.Value.As<Resource>();
+            if (rValue != null)
+            {
+                data[pair.Key] = GetResourcePath(rValue);
+            }
+        }
+
         m_Data[section][key] = data;
     }
-    public void SetValue(string section, string key, IEnumerable<IMorphonSerializable> list)
+    public void SetValue(string section, string key, System.Collections.Generic.IEnumerable<IMorphonSerializable> list)
     {
         NewKey(section, key);
         m_Data[section][key] = MorphonAutoSerializer.SerializeList(list);
     }
 
+    /// <summary>
+    /// Gets a value by section and key. If the value is a Resource that was not local to scene and is in res:// then it will be loaded back.
+    /// </summary>
     public T GetValue<[MustBeVariant] T>(string section, string key, T @default = default)
     {
         if (!HasSectionKey(section, key)) return @default;
@@ -44,21 +63,33 @@ public partial class MorphonConfigFile : Json
 
         if (typeof(IMorphonSerializable).IsAssignableFrom(typeof(T)))
         {
-            return (T)MorphonAutoSerializer.Deserialize(value.As<string>());
+            Dictionary<string, Variant> data = value.As<Dictionary<string, Variant>>();
+            if (data == null) return default;
+
+            //Check for paths and load them back
+            foreach (var pair in data)
+            {
+                if (pair.Value.As<string>().StartsWith("res://"))
+                {
+                    data[pair.Key] = SafeLoadResourceFromPath<Variant>(pair.Value.As<string>());
+                }
+            }
+
+            return (T)MorphonAutoSerializer.Deserialize(value.As<Dictionary<string, Variant>>());
         }
         else if (typeof(Resource).IsAssignableFrom(typeof(T)))
         {
+            if (value.As<string> == null) return default;
             return SafeLoadResourceFromPath<T>(value.As<string>());
         }
-
         return value.As<T>();
     }
-    public List<T> GetListValue<T>(string section, string key, List<T> @default = default) where T : IMorphonSerializable
+    public System.Collections.Generic.IEnumerable<T> GetListValue<T>(string section, string key, System.Collections.Generic.IEnumerable<T> @default = default) where T : IMorphonSerializable
     {
         if (!HasSectionKey(section, key)) return @default;
-        string jsonData = m_Data[section][key].As<string>();
+        Array<Dictionary<string, Variant>> data = m_Data[section][key].As<Array<Dictionary<string, Variant>>>();
 
-        return MorphonAutoSerializer.DeserializeList(jsonData).Cast<T>().ToList();
+        return MorphonAutoSerializer.DeserializeList(data).Cast<T>().ToList();
     }
 
     public bool HasSection(string section)
@@ -121,7 +152,7 @@ public partial class MorphonConfigFile : Json
         }
     }
 
-    public static string GetResourcePath(Resource resource)
+    private static string GetResourcePath(Resource resource)
     {
         if (resource == null) return null;
         if (!resource.ResourceLocalToScene)
@@ -130,7 +161,7 @@ public partial class MorphonConfigFile : Json
         }
         return null;
     }
-    public static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
+    private static T SafeLoadResourceFromPath<[MustBeVariant] T>(string path, T @default = default)
     {
         if (!path.StartsWith("res://")) return @default;
 

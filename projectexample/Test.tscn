@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://2pxalodvigs"]
+[gd_scene load_steps=7 format=3 uid="uid://2pxalodvigs"]
 
 [ext_resource type="Script" uid="uid://c70u57un8374n" path="res://Test.cs" id="1_myinc"]
 [ext_resource type="Script" uid="uid://bxexoyohmapsi" path="res://Cat.cs" id="2_njov2"]
 [ext_resource type="Script" uid="uid://dfo6wtw0dde7v" path="res://Dog.cs" id="3_2au82"]
+[ext_resource type="Texture2D" uid="uid://ct4upl6wy78p1" path="res://icon.svg" id="3_8tn2x"]
 
 [sub_resource type="Resource" id="Resource_8tn2x"]
 script = ExtResource("2_njov2")
@@ -14,6 +15,7 @@ metadata/_custom_type_script = "uid://bxexoyohmapsi"
 [sub_resource type="Resource" id="Resource_aq4fw"]
 script = ExtResource("3_2au82")
 CatFriends = Array[Object]([SubResource("Resource_8tn2x")])
+Icon = ExtResource("3_8tn2x")
 Name = "Doggo"
 Age = 1
 metadata/_custom_type_script = "uid://dfo6wtw0dde7v"

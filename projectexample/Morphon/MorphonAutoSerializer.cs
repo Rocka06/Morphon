@@ -23,18 +23,27 @@ public static class MorphonAutoSerializer
         }
     }
 
-    public static IMorphonSerializable Deserialize(string json)
+    /// <summary>
+    /// This function deserializes data into any IMoprhonSerializable type
+    /// </summary>
+    /// <param name="data">It should be a Dictionary of Variants</param>
+    /// <returns>IMorphonSerializable object</returns>
+    public static IMorphonSerializable Deserialize(Variant data)
     {
-        Dictionary<string, Variant> dict = Json.ParseString(json).As<Dictionary<string, Variant>>();
-        
-        if (dict == null) return null;
-        if (!dict.ContainsKey("Type"))
+        Dictionary<string, Variant> dictData = data.As<Dictionary<string, Variant>>();
+        if (dictData == null)
+        {
+            GD.PrintErr("Invalid data!");
+            return null;
+        }
+
+        if (!dictData.ContainsKey("Type"))
         {
             GD.PrintErr("Type was not set in serialized data!");
             return null;
         }
 
-        string type = dict["Type"].As<string>();
+        string type = dictData["Type"].As<string>();
         if (!_typeMap.ContainsKey(type))
         {
             GD.PrintErr("Unregistered type: ", type);
@@ -42,24 +51,39 @@ public static class MorphonAutoSerializer
         }
 
         IMorphonSerializable obj = (IMorphonSerializable)Activator.CreateInstance(_typeMap[type]);
-        obj.Deserialize(dict);
+        obj.Deserialize(dictData);
         return obj;
     }
 
-    public static System.Collections.Generic.List<IMorphonSerializable> DeserializeList(string jsonArray)
+    /// <summary>
+    /// This function deserializes list data into any IMoprhonSerializable[] type
+    /// </summary>
+    /// <param name="data">It should be an Array of Dictionaries of Variants</param>
+    /// <returns>A list of IMorphonSerializable objects</returns>
+    public static IMorphonSerializable[] DeserializeList(Variant data)
     {
-        Array<string> array = Json.ParseString(jsonArray).As<Array<string>>();
         System.Collections.Generic.List<IMorphonSerializable> objList = new();
-
-        foreach (string item in array)
+        Array<Dictionary<string, Variant>> arrayData = data.As<Array<Dictionary<string, Variant>>>();
+        if (arrayData == null)
         {
-            IMorphonSerializable obj = Deserialize(item.ToString());
+            GD.PrintErr("Invalid list data!");
+            return null;
+        }
+
+        foreach (Dictionary<string, Variant> item in arrayData)
+        {
+            IMorphonSerializable obj = Deserialize(item);
             if (obj != null) objList.Add(obj);
         }
 
-        return objList;
+        return objList.ToArray();
     }
 
+    /// <summary>
+    /// This function serrializes IMorphonSerializable lists into an Array of Dictionaries of Variants
+    /// </summary>
+    /// <param name="list">A list of any IMorphonSerializable type</param>
+    /// <returns>An Array of Dictionaries of Variants</returns>
     public static Array<Dictionary<string, Variant>> SerializeList(System.Collections.Generic.IEnumerable<IMorphonSerializable> list)
     {
         Array<Dictionary<string, Variant>> objArray = new();
