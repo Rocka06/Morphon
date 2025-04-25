@@ -12,6 +12,12 @@ A Plug-and-Play **ConfigFile-style** system for Godot 4 C# that supports saving 
 
 ---
 
+## Installation
+
+Just copy the Morphon folder into your project and you are good to go!
+
+---
+
 ## ✨ How to use
 
 ### Create custom Resources that implement the `IMorphonSerializable` interface
