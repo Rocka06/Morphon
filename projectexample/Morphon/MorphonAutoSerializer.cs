@@ -1,12 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using Godot;
+using Godot.Collections;
 
 namespace Morphon;
 public static class MorphonAutoSerializer
 {
-    private static readonly Dictionary<string, Type> _typeMap = new();
+    private static readonly System.Collections.Generic.Dictionary<string, Type> _typeMap = new();
 
     static MorphonAutoSerializer()
     {
@@ -25,7 +25,7 @@ public static class MorphonAutoSerializer
 
     public static IMorphonSerializable Deserialize(string json)
     {
-        Godot.Collections.Dictionary<string, Variant> dict = Json.ParseString(json).As<Godot.Collections.Dictionary<string, Variant>>();
+        Dictionary<string, Variant> dict = Json.ParseString(json).As<Dictionary<string, Variant>>();
         
         if (dict == null) return null;
         if (!dict.ContainsKey("Type"))
@@ -46,12 +46,12 @@ public static class MorphonAutoSerializer
         return obj;
     }
 
-    public static List<IMorphonSerializable> DeserializeList(string jsonArray)
+    public static System.Collections.Generic.List<IMorphonSerializable> DeserializeList(string jsonArray)
     {
-        Godot.Collections.Array<string> array = Json.ParseString(jsonArray).As<Godot.Collections.Array<string>>();
-        List<IMorphonSerializable> objList = new();
+        Array<string> array = Json.ParseString(jsonArray).As<Array<string>>();
+        System.Collections.Generic.List<IMorphonSerializable> objList = new();
 
-        foreach (var item in array)
+        foreach (string item in array)
         {
             IMorphonSerializable obj = Deserialize(item.ToString());
             if (obj != null) objList.Add(obj);
@@ -60,13 +60,15 @@ public static class MorphonAutoSerializer
         return objList;
     }
 
-    public static Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> SerializeList(IEnumerable<IMorphonSerializable> list)
+    public static Array<Dictionary<string, Variant>> SerializeList(System.Collections.Generic.IEnumerable<IMorphonSerializable> list)
     {
-        Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> objArray = new();
+        Array<Dictionary<string, Variant>> objArray = new();
 
         foreach (IMorphonSerializable obj in list)
         {
-            objArray.Add(obj.Serialize());
+            obj.Serialize(out Dictionary<string, Variant> data);
+            data.Add("Type", obj.GetType().FullName);
+            objArray.Add(data);
         }
 
         return objArray;

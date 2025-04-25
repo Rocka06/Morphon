@@ -14,18 +14,13 @@ public partial class AnimalResource : Resource, IMorphonSerializable
         Name = data["Name"].As<string>();
         Age = data["Age"].As<int>();
     }
-
-    protected Dictionary<string, Variant> m_SerializerDict;
-    public virtual Dictionary<string, Variant> Serialize()
+    public virtual void Serialize(out Dictionary<string, Variant> data)
     {
-        m_SerializerDict = new()
+        data = new()
         {
-            { "Type", GetType().FullName },
             { "Name", Name },
             { "Age", Age }
         };
-
-        return m_SerializerDict;
     }
 
     public override string ToString()

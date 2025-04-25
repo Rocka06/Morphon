@@ -27,12 +27,14 @@ public partial class MorphonConfigFile : Json
     public void SetValue(string section, string key, IMorphonSerializable value)
     {
         NewKey(section, key);
-        m_Data[section][key] = value.Serialize();
+        value.Serialize(out var data);
+        data.Add("Type", value.GetType().FullName);
+        m_Data[section][key] = data;
     }
     public void SetValue(string section, string key, IEnumerable<IMorphonSerializable> list)
     {
         NewKey(section, key);
-        m_Data[section][key] = MorphonAutoSerializer.SerializeList(list.ToList());
+        m_Data[section][key] = MorphonAutoSerializer.SerializeList(list);
     }
 
     public T GetValue<[MustBeVariant] T>(string section, string key, T @default = default)

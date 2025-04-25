@@ -4,6 +4,6 @@ using Godot.Collections;
 namespace Morphon;
 public interface IMorphonSerializable
 {
-    public Dictionary<string, Variant> Serialize();
+    public void Serialize(out Dictionary<string, Variant> data);
     public void Deserialize(Dictionary<string, Variant> data);
 }

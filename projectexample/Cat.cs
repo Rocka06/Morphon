@@ -14,12 +14,10 @@ public partial class Cat : AnimalResource
         color = data["color"].As<Color>();
     }
 
-    public override Dictionary<string, Variant> Serialize()
+    public override void Serialize(out Dictionary<string, Variant> data)
     {
-        base.Serialize();
-        m_SerializerDict.Add("color", color.ToHtml());
-
-        return m_SerializerDict;
+        base.Serialize(out data);
+        data.Add("color", color.ToHtml());
     }
 
     public override string ToString()

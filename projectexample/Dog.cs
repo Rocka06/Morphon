@@ -16,12 +16,10 @@ public partial class Dog : AnimalResource
         CatFriends = MorphonAutoSerializer.DeserializeList(data["CatFriends"].As<string>()).Cast<Cat>().ToArray();
     }
 
-    public override Dictionary<string, Variant> Serialize()
+    public override void Serialize(out Dictionary<string, Variant> data)
     {
-        base.Serialize();
-        m_SerializerDict.Add("CatFriends", MorphonAutoSerializer.SerializeList(CatFriends));
-
-        return m_SerializerDict;
+        base.Serialize(out data);
+        data.Add("CatFriends", MorphonAutoSerializer.SerializeList(CatFriends));
     }
 
     public override string ToString()
