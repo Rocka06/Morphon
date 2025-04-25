@@ -77,6 +77,12 @@ public static class MorphonAutoSerializer
     /// </summary>
     public static Dictionary<string, Variant> Serialize(IMorphonSerializable obj)
     {
+        if (obj == null)
+        {
+            GD.PrintErr("You cannot pass null to MorphonAutoSerializer.Serialize()!");
+            return null;
+        }
+
         obj.Serialize(out var data);
         data.Add("Type", obj.GetType().FullName);
 
