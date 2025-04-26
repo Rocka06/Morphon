@@ -1,42 +1,31 @@
-# Morphon
+# Morphon for Godot 4 (C#)
 
-A Plug-and-Play **ConfigFile-style** system for Godot 4 C# that supports saving and loading **custom Resources** and Json supported values into Json files!  
+**Morphon** is a simple system for saving and loading structured object data in Godot 4 using Godot's built-in JSON.  
+It acts like a `ConfigFile`, but supports **polymorphic serialization** through an interface and reflection.
 
 ---
 
 ## Features
 
-- ✅ Works like Godot's `ConfigFile` but without the risk of injections
-- ✅ Serialize and deserialize single values or entire lists
-- ✅ Built with Godot's native `JSON`, `Dictionary`, and `Array` types — no external dependencies
+- Interface-based design with `IMorphonSerializable`
+- Supports JSON compatible Variants (number, string, bool, arrays, dictionaries), single objects and lists of objects
+- No external libraries required (uses Godot's built-in JSON)
+- Ideal for game saves, runtime configuration, and modular data
 
 ---
 
-## Installation
+## How It Works
 
-Just copy the Morphon folder into your project and you are good to go!
+MorphonConfigFile works exactly like the built-in `ConfigFile` just without the risk of injections.  
+Objects implementing `IMorphonSerializable` can define their own save/load logic.
 
 ---
 
-## ✨ How to use
+## Example usage
 
-### Create custom Resources that implement the `IMorphonSerializable` interface
+### Defining Serializable Classes
 
-#### Serialization is basically just adding Json supported types to a Dictionary
-If a value you are trying to serialize is not supported by Json (for example: Resources):
-- If it implements the IMorphonSerializable interface then you can use `MorphonAutoSerializer.Serialize(object)` to serialize the object.
-- If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.SerializeList(list)` to serialize the list.
-- If it's a built in Resource and is not local to scene (for example: SpriteFrames) then you can just add it to the dictionary and it's path will be saved, and later loaded back!
-- Otherwise it cannot be saved properly, and a value of `null` will be written in the save file
-
-#### Deserialization is basically just reading data from a Dictionary of Variants
-If a value you are trying to deserialize is not supported by Json (for example: Resources):
-- If it implements the IMorphonSerializable interface then you can use `MorphonAutoSerializer.Deserialize(object)` to deserialize the object.
-- If it's a list of IMorphonSerializable objects then you can use `MorphonAutoSerializer.DeserializeList(list)` to deserialize the list.
-- If it's a built in Resource and was not local to scene (for example: SpriteFrames) then you can just parse the Variant with `.As<SpriteFrames>()`!
-
-Pro tip: If you make the `IMorphonSerializable`s functions virtual then you don't have to reserialize the base class!
-
+Animal base class:
 ```csharp
 using Godot;
 using Godot.Collections;
@@ -63,7 +52,7 @@ public partial class Animal : Resource, IMorphonSerializable
     }
 }
 ```
-
+Inherited Cat class: 
 ```csharp
 using Godot;
 using Godot.Collections;
@@ -97,6 +86,7 @@ public partial class Cat : AnimalResource
 }
 ```
 
+Inherited Dog class: 
 ```csharp
 using System.Linq;
 using Godot;
@@ -106,21 +96,16 @@ using Godot.Collections;
 [GlobalClass]
 public partial class Dog : AnimalResource
 {
-    [Export] public Cat[] CatFriends;
-    [Export] public Dog DogFriend;
+    [Export] public Cat CatFriend;
     [Export] public Texture2D Icon;
 
     public override void Serialize(out Dictionary<string, Variant> data)
     {
         base.Serialize(out data);
 
-        if (DogFriend != null)
+        if (CatFriend != null)
         {
-            data.Add("DogFriend", MorphonAutoSerializer.Serialize(DogFriend));
-        }
-        if (CatFriends != null)
-        {
-            data.Add("CatFriends", MorphonAutoSerializer.SerializeList(CatFriends));
+            data.Add("CatFriend", MorphonAutoSerializer.Serialize(CatFriend));
         }
         if (Icon != null)
         {
@@ -132,15 +117,9 @@ public partial class Dog : AnimalResource
         base.Deserialize(data);
 
         //These checks allow the variables to be null
-        if (data.ContainsKey("DogFriend"))
+        if (data.ContainsKey("CatFriend"))
         {
-            DogFriend = (Dog)MorphonAutoSerializer.Deserialize(data["DogFriend"]);
-        }
-
-        if (data.ContainsKey("CatFriends"))
-        {
-            IMorphonSerializable[] serializables = MorphonAutoSerializer.DeserializeList(data["CatFriends"]);
-            CatFriends = serializables.Cast<Cat>().ToArray();
+            CatFriend = (Cat)MorphonAutoSerializer.Deserialize(data["CatFriend"]);
         }
 
         if (data.ContainsKey("Icon"))
@@ -152,73 +131,69 @@ public partial class Dog : AnimalResource
     public override string ToString()
     {
         string baseString = base.ToString();
-        return baseString + $"\nCatFriend: {CatFriends[0].Name}\nIcon path: {Icon?.ResourcePath}\nDogFriend: {DogFriend.Name}";
+        return baseString + $"\nCatFriend: {CatFriend.Name}\nIcon path: {Icon?.ResourcePath}";
     }
 }
 ```
 
 ---
 
-### 🔧 How to use `MorphonConfigFile`
-
-You can use the MorphonConfigFile just like Godots built in ConfigFile!
+### Saving Data
 
 ```csharp
-using Godot;
-using Morphon;
-
-public partial class Test : Node
+MorphonConfigFile config = new();
+config.SetValue("Player", "Pet", (IMorphonSerializable)new Dog()
 {
-    [Export] public AnimalResource animal;
-
-    private MorphonConfigFile file = new();
-
-    public override void _Ready()
+    Name = "Doggo",
+    Age = 1,
+    CatFriend = new Cat()
     {
-        file.SetValue("Data", "Animal", (IMorphonSerializable)animal);
-        file.Save("user://Save.json");
-
-        file.Clear();
-        file.Load("user://Save.json");
-
-        GD.Print("Loaded data:");
-        GD.Print(file.GetValue<AnimalResource>("Data", "Animal"));
+        Name = "Kitty",
+        Age = 6,
+        color = Color.Color8(200, 100, 43)
     }
-}
-```
+});
 
-#### Printed data example:
-```
-Loaded data:
-Name: Doggo
-Age: 1
-CatFriend: Kitty
-Icon path: res://icon.svg
-DogFriend: Pongo
-```
-
-### 💾 File Format Example
-
-```JSON
+config.SetValue("Game", "Cats", new List<Cat>
 {
-  "Animal": {
-    "Animal": {
-      "Age": 1,
-      "CatFriends": [
-        {
-          "Age": 3,
-          "Name": "Kitty",
-          "Type": "Cat",
-          "color": "ffff00ff"
-        }
-      ],
-      "DogFriend": {
-        "Age": 8,
-        "CatFriends": [],
-        "Name": "Pongo",
-        "Type": "Dog"
+    new Cat { Name = "Whiskers", Age = 7 },
+    new Cat { Name = "Kitty", Age = 2 }
+});
+
+config.Save("user://Save.json");
+```
+
+---
+
+## Saved File Example
+
+```json
+{
+  "Game": {
+    "Cats": [
+      {
+        "Age": 7,
+        "Name": "Whiskers",
+        "Type": "Cat",
+        "color": "00000000"
       },
-      "Icon": "res://icon.svg",
+      {
+        "Age": 2,
+        "Name": "Kitty",
+        "Type": "Cat",
+        "color": "00000000"
+      }
+    ]
+  },
+  "Player": {
+    "Pet": {
+      "Age": 1,
+      "CatFriend": {
+        "Age": 6,
+        "Name": "Kitty",
+        "Type": "Cat",
+        "color": "c8642bff"
+      },
       "Name": "Doggo",
       "Type": "Dog"
     }
@@ -228,6 +203,25 @@ DogFriend: Pongo
 
 ---
 
-## 📃 License
+### Loading Data
 
-MIT — use it freely for commercial or personal projects.
+```csharp
+MorphonConfigFile config = new();
+config.Load("user://Save.json");
+
+Dog myDog = config.GetValue<Dog>("Player", "Pet");
+List<Cat> cats = config.GetListValue<Cat>("Game", "Cats");
+```
+
+---
+
+## Installation
+
+1. Copy the `Morphon` folder into your Godot project.
+2. You're all done.
+
+---
+
+## License
+
+Licensed under the MIT License.
